@@ -430,3 +430,29 @@ h3 {
 	font-size: 0.875rem;
 	font-weight: 500;
 }
+
+.attribution {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 20px;
+	padding: 0px 15px 8px 15px;
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+	color: #666;
+}
+.attribution a {
+	display: flex;
+	align-items: center;
+	color: #0066cc;
+	text-decoration: none;
+	transition: color 0.3s ease;
+}
+.attribution a:hover {
+	color: #004499;
+}
+.attribution svg {
+	width: 16px;
+	height: 16px;
+	margin-right: 5px;
+}
