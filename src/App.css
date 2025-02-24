@@ -1,0 +1,34 @@
+#root {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.logo {
+  @apply h-24 p-6 transition-all duration-300;
+}
+
+.logo:hover {
+  @apply brightness-110;
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  @apply p-8 font-jetbrains;
+}
+
+.read-the-docs {
+  @apply text-gray-500 font-jetbrains;
+}
