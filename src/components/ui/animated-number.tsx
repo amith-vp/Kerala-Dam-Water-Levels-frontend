@@ -23,7 +23,7 @@ export function AnimatedNumber({
     restSpeed: 0.5 
   });
 
-  const display = useTransform(spring, (current) => 
+  const displayNumber = useTransform(spring, (current) => 
     `${prefix}${current.toFixed(decimals)}`
   );
 
@@ -33,8 +33,8 @@ export function AnimatedNumber({
 
   return (
     <motion.span className={className}>
-      <motion.span>{display}</motion.span>
-      <span className="text-[0.65em] opacity-40 ml-0.5">{suffix}</span>
+      <motion.span>{displayNumber}</motion.span>
+      {suffix && <span className="text-xs ml-0.5">{suffix}</span>}
     </motion.span>
   );
 }

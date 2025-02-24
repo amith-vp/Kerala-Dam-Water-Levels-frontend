@@ -793,7 +793,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                       <AnimatedNumber
                         value={parseFloat(currentData?.rainfall || '0')}
                         decimals={0}
-                        suffix=" mm/h"
+                        suffix=" mm"
                       />
                     </div>
                   </foreignObject>
