@@ -103,7 +103,7 @@ const DamDetail = () => {
 
   const visualizationData = useMemo(() => {
     if (!damData?.data || !referenceDate) return [];
-    const twoYearsAgo = subYears(referenceDate, 3);
+    const twoYearsAgo = subYears(referenceDate, 2);
 
     return damData.data.filter((item) => {
       const [day, month, year] = item.date.split('.');
