@@ -33,7 +33,7 @@ export function DamHeader({
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/')}
           size="icon"
           className="h-8 w-8 flex-shrink-0"
         >
