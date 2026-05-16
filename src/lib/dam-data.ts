@@ -9,7 +9,7 @@ export const isUnavailableValue = (value: unknown): boolean => {
   if (value === null || value === undefined) return true;
   const normalized = String(value).trim();
   if (!normalized) return true;
-  return ["_", "-", "N/A", "NA", "NULL"].includes(normalized.toUpperCase());
+  return ["_", "-", "N/A", "NA", "NAN", "NULL"].includes(normalized.toUpperCase());
 };
 
 export const normalizeMetricValue = (value: unknown): string => {

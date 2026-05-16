@@ -30,8 +30,13 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
   const spillwayReleaseValue = parseDamNumber(currentData?.spillwayRelease);
   const powerHouseDischargeValue = parseDamNumber(currentData?.powerHouseDischarge);
   const hasRainfall = rainfallValue !== null && rainfallValue > 0;
+  const hasSpillwayRelease = spillwayReleaseValue !== null && spillwayReleaseValue > 0;
+  const hasPowerHouseDischarge = powerHouseDischargeValue !== null && powerHouseDischargeValue > 0;
+  const turbineDuration = hasPowerHouseDischarge
+    ? `${Math.max(0.1, 2 - (powerHouseDischargeValue / 50))}s`
+    : "2s";
   const MetricValue = ({ value, decimals, suffix }: { value: number | null; decimals: number; suffix: string }) => (
-    value === null ? <span>N/A</span> : <AnimatedNumber value={value} decimals={decimals} suffix={suffix} />
+    value === null || !Number.isFinite(value) ? <span>N/A</span> : <AnimatedNumber value={value} decimals={decimals} suffix={suffix} />
   );
 
   const raindrops = useMemo(() => {
@@ -523,7 +528,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                     ))}
 
                     {/* Spillway water flow */}
-                    {currentData?.spillwayRelease > 0 && (
+                    {hasSpillwayRelease && (
                       <g>
                         {/* Round outlet flows */}
                         {[25, 45].map((x, i) => (
@@ -567,7 +572,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                       opacity="0.9" />
 
                     {/* Power house water flow anim */}
-                    {currentData?.powerHouseDischarge > 0 && (
+                    {hasPowerHouseDischarge && (
                       <motion.path
                         d="M-7 200 
                              L30 205
@@ -620,7 +625,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
 
                       {/* Turbine  */}
                       <g transform="translate(12.5,11) scale(0.9)">
-                        {currentData?.powerHouseDischarge > 0 ? (
+                        {hasPowerHouseDischarge ? (
                           <>
                             {/* Rotating */}
                             <g>
@@ -629,7 +634,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                                 type="rotate"
                                 from="0"
                                 to="360"
-                                dur={`${Math.max(0.1, 2 - (currentData.powerHouseDischarge / 50))}s`}
+                                dur={turbineDuration}
                                 repeatCount="indefinite" />
 
                               {/*  turbine blades */}
