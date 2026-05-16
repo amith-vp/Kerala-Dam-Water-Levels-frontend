@@ -362,11 +362,6 @@ const DamList = ({
                             <div className="flex justify-between items-start gap-4 min-w-0 mt-4">
                               <div className="min-w-0 flex-1">
                                 <h3 className="font-semibold text-sm sm:text-base truncate pr-2 transition-colors duration-300">{dam.name}</h3>
-                                {dam.district && (
-                                  <p className="text-[11px] sm:text-xs text-muted-foreground/70 truncate mt-0.5">
-                                    {dam.district}
-                                  </p>
-                                )}
                                 <p className="text-xs sm:text-sm text-muted-foreground/80 truncate mt-0.5">
                                   {formatValue(dam.data[0]?.waterLevel, "waterLevel")}
                                 </p>
