@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Search, ArrowUpDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select,
   SelectContent,
@@ -27,7 +26,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import type { Dam, DamSource, DamSourceFilter } from "@/types/dam";
+import type { Dam, DamSource } from "@/types/dam";
 import { AnimatedNumber } from '@/components/ui/animated-number';
 import { formatDamValue, getDamSource, parseDamNumber } from "@/lib/dam-data";
 
@@ -40,8 +39,6 @@ interface DamListProps {
   dams: Dam[];
   isLoading: boolean;
   error: Error | null;
-  sourceFilter: DamSourceFilter;
-  onSourceFilterChange: (source: DamSourceFilter) => void;
 }
 
 const getSortLabel = (field: SortField): string => {
@@ -74,23 +71,6 @@ const formatUnits: Record<string, string> = {
 const formatValue = (value: string | undefined, property: string) =>
   property === "name" ? value : formatDamValue(value, formatUnits[property] || "");
 
-const sourceLabels: Record<DamSourceFilter, string> = {
-  all: "All",
-  KSEB: "KSEB",
-  Irrigation: "Irrigation",
-};
-
-const getSourceAccentClasses = (source: DamSourceFilter) => {
-  switch (source) {
-    case "KSEB":
-      return "border-blue-500/40 text-blue-700 dark:text-blue-300 data-[state=on]:bg-blue-600 data-[state=on]:text-white data-[state=on]:border-blue-600";
-    case "Irrigation":
-      return "border-teal-600/40 text-teal-700 dark:text-teal-300 data-[state=on]:bg-teal-600 data-[state=on]:text-white data-[state=on]:border-teal-600";
-    default:
-      return "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground";
-  }
-};
-
 const getDamSourceBadgeClasses = (source: DamSource) =>
   source === "Irrigation"
     ? "border-teal-600/30 bg-teal-50/95 text-teal-700 dark:bg-teal-950/80 dark:text-teal-300"
@@ -111,8 +91,6 @@ const DamList = ({
   dams,
   isLoading,
   error,
-  sourceFilter,
-  onSourceFilterChange,
 }: DamListProps) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -203,7 +181,7 @@ const DamList = ({
     });
 
     return result;
-  }, [dams, search, sortField, sortDirection, sourceFilter]);
+  }, [dams, search, sortField, sortDirection]);
 
   const getSortedValue = (dam: Dam) => {
     switch (sortField) {
@@ -264,23 +242,6 @@ const DamList = ({
             </div>
           </div>
 
-          <ToggleGroup
-            type="single"
-            value={sourceFilter}
-            onValueChange={(value) => value && onSourceFilterChange(value as DamSourceFilter)}
-            className="mt-3 grid grid-cols-3 rounded-lg border border-border/60 bg-background/70 p-1"
-          >
-            {(["all", "KSEB", "Irrigation"] as DamSourceFilter[]).map((source) => (
-              <ToggleGroupItem
-                key={source}
-                value={source}
-                className={`h-9 rounded-md border border-transparent text-xs sm:text-sm ${getSourceAccentClasses(source)}`}
-              >
-                {sourceLabels[source]}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-          
           <div className="flex flex-col sm:flex-row gap-2 min-w-0 max-w-full mt-3">
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

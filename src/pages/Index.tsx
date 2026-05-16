@@ -60,6 +60,8 @@ const Index = () => {
                 dams={data?.dams || []}
                 lastUpdate={data?.lastUpdate}
                 lastUpdates={data?.lastUpdates}
+                sourceFilter={sourceFilter}
+                onSourceFilterChange={setSourceFilter}
               />
             </div>
             <div className="h-full w-full overflow-hidden">
@@ -67,8 +69,6 @@ const Index = () => {
                 dams={data?.dams || []}
                 isLoading={isLoading}
                 error={error as Error}
-                sourceFilter={sourceFilter}
-                onSourceFilterChange={setSourceFilter}
               />
             </div>
           </SplitPane>

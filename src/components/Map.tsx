@@ -7,17 +7,37 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import DamMarker from './DamMarker';
 import { getDamSource, parseDamNumber } from '@/lib/dam-data';
-import type { DamSource } from '@/types/dam';
+import type { DamSource, DamSourceFilter } from '@/types/dam';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface MapProps {
   dams: Dam[];
   lastUpdate?: string;
   lastUpdates?: Partial<Record<DamSource, string>>;
+  sourceFilter: DamSourceFilter;
+  onSourceFilterChange: (source: DamSourceFilter) => void;
 }
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
-const Map = ({ dams, lastUpdate, lastUpdates }: MapProps) => {
+const sourceLabels: Record<DamSourceFilter, string> = {
+  all: "All",
+  KSEB: "KSEB",
+  Irrigation: "Irrigation",
+};
+
+const getSourceAccentClasses = (source: DamSourceFilter) => {
+  switch (source) {
+    case "KSEB":
+      return "border-blue-500/40 text-blue-700 dark:text-blue-300 data-[state=on]:bg-blue-600 data-[state=on]:text-white data-[state=on]:border-blue-600";
+    case "Irrigation":
+      return "border-teal-600/40 text-teal-700 dark:text-teal-300 data-[state=on]:bg-teal-600 data-[state=on]:text-white data-[state=on]:border-teal-600";
+    default:
+      return "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground";
+  }
+};
+
+const Map = ({ dams, lastUpdate, lastUpdates, sourceFilter, onSourceFilterChange }: MapProps) => {
   const navigate = useNavigate();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapboxMap = useRef<mapboxgl.Map | null>(null);
@@ -168,6 +188,29 @@ const Map = ({ dams, lastUpdate, lastUpdates }: MapProps) => {
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }} className="touch-none">
       <div ref={mapRef} style={{ position: 'absolute', width: '100%', height: '100%' }} />
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="absolute bottom-1.5 left-1.5 z-[15] sm:bottom-2 sm:left-2"
+      >
+        <ToggleGroup
+          type="single"
+          value={sourceFilter}
+          onValueChange={(value) => value && onSourceFilterChange(value as DamSourceFilter)}
+          className="grid grid-cols-3 rounded-lg border border-border/60 bg-white/95 p-1 shadow-lg backdrop-blur-md dark:bg-zinc-900/95"
+        >
+          {(["all", "KSEB", "Irrigation"] as DamSourceFilter[]).map((source) => (
+            <ToggleGroupItem
+              key={source}
+              value={source}
+              className={`h-8 rounded-md border border-transparent px-2 text-[11px] sm:h-9 sm:px-3 sm:text-xs ${getSourceAccentClasses(source)}`}
+            >
+              {sourceLabels[source]}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </motion.div>
       {(lastUpdate || lastUpdates) && (
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
