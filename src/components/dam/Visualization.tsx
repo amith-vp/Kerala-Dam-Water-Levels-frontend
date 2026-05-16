@@ -798,7 +798,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                         <MetricValue value={outflowValue} decimals={0} suffix=" m³/s" />
                       </div>
                     </foreignObject>
-                    {outflowValue === null && <SvgUnavailablePill x={5} y={66} label="No data" />}
+                    {outflowValue === null && <SvgUnavailablePill x={5} y={66} />}
                   </g>
                 ) : (
                   <>
@@ -852,7 +852,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                       <MetricValue value={rainfallValue} decimals={0} suffix=" mm" />
                     </div>
                   </foreignObject>
-                  {rainfallValue === null && <SvgUnavailablePill x={0} y="-12" label="No data" />}
+                  {rainfallValue === null && <SvgUnavailablePill x={0} y="-12" />}
                 </g>
 
                 <g transform="translate(0,220)">
@@ -868,7 +868,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                       <MetricValue value={inflowValue} decimals={0} suffix=" m³/s" />
                     </div>
                   </foreignObject>
-                  {inflowValue === null && <SvgUnavailablePill x={20} y="66" label="No data" />}
+                  {inflowValue === null && <SvgUnavailablePill x={20} y="66" />}
                  
                 </g>
               </g>
