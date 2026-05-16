@@ -23,20 +23,30 @@ interface VisualizationProps {
 export function Visualization({ data, currentIndex, onIndexChange, damData }: VisualizationProps) {
   const { theme } = useTheme();
   const currentData = data[currentIndex] || data[data.length - 1];
-  const waterLevel = parseDamNumber(currentData?.storagePercentage) ?? 0;
+  const storagePercentage = parseDamNumber(currentData?.storagePercentage);
+  const waterLevel = Math.max(0, Math.min(storagePercentage ?? 0, 100));
   const actualWaterLevel = parseDamNumber(currentData?.waterLevel);
   const rainfallValue = parseDamNumber(currentData?.rainfall);
   const inflowValue = parseDamNumber(currentData?.inflow);
   const spillwayReleaseValue = parseDamNumber(currentData?.spillwayRelease);
   const powerHouseDischargeValue = parseDamNumber(currentData?.powerHouseDischarge);
+  const outflowValue = parseDamNumber(currentData?.totalOutflow || currentData?.outflow);
+  const isIrrigation = damData?.source === "Irrigation";
   const hasRainfall = rainfallValue !== null && rainfallValue > 0;
-  const hasSpillwayRelease = spillwayReleaseValue !== null && spillwayReleaseValue > 0;
-  const hasPowerHouseDischarge = powerHouseDischargeValue !== null && powerHouseDischargeValue > 0;
+  const hasSpillwayRelease = !isIrrigation && spillwayReleaseValue !== null && spillwayReleaseValue > 0;
+  const hasPowerHouseDischarge = !isIrrigation && powerHouseDischargeValue !== null && powerHouseDischargeValue > 0;
   const turbineDuration = hasPowerHouseDischarge
     ? `${Math.max(0.1, 2 - (powerHouseDischargeValue / 50))}s`
     : "2s";
   const MetricValue = ({ value, decimals, suffix }: { value: number | null; decimals: number; suffix: string }) => (
     value === null || !Number.isFinite(value) ? <span>N/A</span> : <AnimatedNumber value={value} decimals={decimals} suffix={suffix} />
+  );
+  const SvgUnavailablePill = ({ x, y, label = "N/A" }: { x: number; y: number; label?: string }) => (
+    <foreignObject x={x} y={y} width="58" height="22">
+      <div className="inline-flex h-5 items-center rounded-full border border-border/50 bg-background/80 px-2 text-[10px] font-semibold text-muted-foreground shadow-sm backdrop-blur-sm">
+        {label}
+      </div>
+    </foreignObject>
   );
 
   const raindrops = useMemo(() => {
@@ -479,14 +489,10 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
 
 
                 </g>
-                {/* Spilway struct behind dam */}
+                {/* Spilway/canal struct behind dam */}
                 <g transform="translate(210,260)">
 
-                  <path d="M6 10
-                                              L-13 40
-                                              L80 40
-                                              60 10
-                                              Z"
+                  <path d={isIrrigation ? "M-18 18 L70 18 L77 40 L-26 40 Z" : "M6 10 L-13 40 L80 40 60 10 Z"}
                     fill="hsl(var(--dam-structure))"
                     opacity="0.5" />
 
@@ -502,56 +508,81 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                            Z"
                     fill="hsl(var(--dam-structure))" />
 
-                  {/*  Spillway opening/anim */}
-                  <g transform="translate(90,180)">
+                  {isIrrigation ? (
+                    <g transform="translate(72,177)">
+                      <path
+                        d="M20 28 C42 28 60 28 82 28"
+                        stroke="hsl(var(--dam-structure-dark))"
+                        strokeWidth="11"
+                        strokeLinecap="round"
+                        fill="none"
+                        opacity="0.82"
+                      />
+                      <path
+                        d="M20 28 C42 28 60 28 82 28"
+                        stroke="hsl(var(--dam-water))"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        fill="none"
+                        opacity={outflowValue === null ? 0.18 : 0.58}
+                      />
+                      {outflowValue === null ? (
+                        <SvgUnavailablePill x={48} y={6} />
+                      ) : null}
+                    </g>
+                  ) : (
+                    <g transform="translate(90,180)">
 
-                    {/* Circular openings - closer together */}
-                    {[25, 45].map((x, i) => (
-                      <g key={`spillway-opening-${i}`}>
-                        <circle
-                          cx={x}
-                          cy="25"
-                          r="5"
-                          fill="hsl(var(--dam-structure-dark))"
-                          opacity="0.9"
-                        />
-                        <circle
-                          cx={x}
-                          cy="25"
-                          r="4"
-                          fill="gray"
-                          stroke="hsl(var(--dam-structure-dark))"
-                          strokeWidth="2"
-                          opacity="0.9"
-                        />
-                      </g>
-                    ))}
-
-                    {/* Spillway water flow */}
-                    {hasSpillwayRelease && (
-                      <g>
-                        {/* Round outlet flows */}
-                        {[25, 45].map((x, i) => (
-                          <motion.path
-                            key={`spillway-flow-${i}`}
-                            d={`M${x} 24
-                                L${x} 40`}
-                            stroke="hsl(var(--dam-water))"
-                            strokeWidth="6"
-                            fill="none"
-                            opacity="0.6"
-                            initial={{ pathLength: 0 }}
-                            animate={{ pathLength: 1 }}
-                            transition={{
-                              duration: 0.8,
-                              repeat: 0,
-                              ease: "linear"
-                            }}
+                      {/* Circular openings - closer together */}
+                      {[25, 45].map((x, i) => (
+                        <g key={`spillway-opening-${i}`}>
+                          <circle
+                            cx={x}
+                            cy="25"
+                            r="5"
+                            fill="hsl(var(--dam-structure-dark))"
+                            opacity="0.9"
                           />
-                        ))}
-                      </g>
-                    )}
-                  </g>
+                          <circle
+                            cx={x}
+                            cy="25"
+                            r="4"
+                            fill="gray"
+                            stroke="hsl(var(--dam-structure-dark))"
+                            strokeWidth="2"
+                            opacity="0.9"
+                          />
+                        </g>
+                      ))}
+
+                      {/* Spillway water flow */}
+                      {hasSpillwayRelease ? (
+                        <g>
+                          {/* Round outlet flows */}
+                          {[25, 45].map((x, i) => (
+                            <motion.path
+                              key={`spillway-flow-${i}`}
+                              d={`M${x} 24
+                                  L${x} 40`}
+                              stroke="hsl(var(--dam-water))"
+                              strokeWidth="6"
+                              fill="none"
+                              opacity="0.6"
+                              initial={{ pathLength: 0 }}
+                              animate={{ pathLength: 1 }}
+                              transition={{
+                                duration: 0.8,
+                                repeat: 0,
+                                ease: "linear"
+                              }}
+                            />
+                          ))}
+                        </g>
+                      ) : spillwayReleaseValue === null ? (
+                        <SvgUnavailablePill x={32} y={36} />
+                      ) : null}
+                    </g>
+                  )}
 
                   {/* bottom bar */}
                   <rect x="-15" y="210"
@@ -562,35 +593,39 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
 
 
 
-                    {/* Power house penstock*/}
-                    <path d="M-7 200 
-                             L30 205
-                             L50 208"
-                      stroke="hsl(var(--dam-structure-dark))"
-                      strokeWidth="8"
-                      fill="none"
-                      opacity="0.9" />
+                    {!isIrrigation && (
+                      <>
+                        {/* Power house penstock*/}
+                        <path d="M-7 200 
+                                 L30 205
+                                 L50 208"
+                          stroke="hsl(var(--dam-structure-dark))"
+                          strokeWidth="8"
+                          fill="none"
+                          opacity="0.9" />
 
-                    {/* Power house water flow anim */}
-                    {hasPowerHouseDischarge && (
-                      <motion.path
-                        d="M-7 200 
-                             L30 205
-                             L50 208"
-                        stroke="hsl(var(--dam-water))"
-                        strokeWidth="4"
-                        fill="none"
-                        initial={{ opacity: 0, pathLength: 0 }}
-                        animate={{ opacity: 0.6, pathLength: 1 }}
-                        transition={{
-                          opacity: { duration: 0.2 },
-                          pathLength: { duration: 1, repeat: 0 }
-                        }}
-                      />
-                    )}
+                        {/* Power house water flow anim */}
+                        {hasPowerHouseDischarge ? (
+                          <motion.path
+                            d="M-7 200 
+                                 L30 205
+                                 L50 208"
+                            stroke="hsl(var(--dam-water))"
+                            strokeWidth="4"
+                            fill="none"
+                            initial={{ opacity: 0, pathLength: 0 }}
+                            animate={{ opacity: 0.6, pathLength: 1 }}
+                            transition={{
+                              opacity: { duration: 0.2 },
+                              pathLength: { duration: 1, repeat: 0 }
+                            }}
+                          />
+                        ) : powerHouseDischargeValue === null ? (
+                          <SvgUnavailablePill x={12} y={186} />
+                        ) : null}
 
-                    {/* Power house structure */}
-                    <g transform="translate(45,200)">
+                        {/* Power house structure */}
+                        <g transform="translate(45,200)">
 
 
                       {/* Power house building */}
@@ -694,7 +729,9 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                           </>
                         )}
                       </g>
-                    </g>
+                        </g>
+                      </>
+                    )}
                   </g>
 
                   {/* Dam Top box */}
@@ -748,36 +785,55 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
 
               {/* Right side cards */}
               <g transform="translate(280,0)">
-                <g transform="translate(0,130)">
+                {isIrrigation ? (
+                  <g transform="translate(0,170)">
+                    <text x="5" y="30"
+                      fill="hsl(var(--foreground))"
+                      fontSize="14"
+                      fontWeight="500">
+                      Outflow
+                    </text>
+                    <foreignObject x="5" y="35" width="150" height="30">
+                      <div className="text-2xl font-medium">
+                        <MetricValue value={outflowValue} decimals={0} suffix=" m³/s" />
+                      </div>
+                    </foreignObject>
+                    {outflowValue === null && <SvgUnavailablePill x={5} y={66} label="No data" />}
+                  </g>
+                ) : (
+                  <>
+                    <g transform="translate(0,130)">
 
-                  <text x="5" y="30"
-                    fill="hsl(var(--foreground))"
-                    fontSize="14"
-                    fontWeight="500">
-                    Spillway Discharge
-                  </text>
-                  <foreignObject x="5" y="35" width="130" height="30">
-                    <div className="text-2xl font-medium">
-                      <MetricValue value={spillwayReleaseValue} decimals={0} suffix=" m³/s" />
-                    </div>
-                  </foreignObject>
-                </g>
+                      <text x="5" y="30"
+                        fill="hsl(var(--foreground))"
+                        fontSize="14"
+                        fontWeight="500">
+                        Spillway Discharge
+                      </text>
+                      <foreignObject x="5" y="35" width="130" height="30">
+                        <div className="text-2xl font-medium">
+                          <MetricValue value={spillwayReleaseValue} decimals={0} suffix=" m³/s" />
+                        </div>
+                      </foreignObject>
+                    </g>
 
-                <g transform="translate(0,220)">
+                    <g transform="translate(0,220)">
 
-                  <text x="5" y="30"
-                    fill="hsl(var(--foreground))"
-                    fontSize="14"
-                    fontWeight="500">
-                    Power H. Discharge
-                  </text>
-                  <foreignObject x="5" y="35" width="130" height="30">
-                    <div className="text-2xl font-medium">
-                      <MetricValue value={powerHouseDischargeValue} decimals={0} suffix=" m³/s" />
-                    </div>
-                  </foreignObject>
-                  
-                </g>
+                      <text x="5" y="30"
+                        fill="hsl(var(--foreground))"
+                        fontSize="14"
+                        fontWeight="500">
+                        Power H. Discharge
+                      </text>
+                      <foreignObject x="5" y="35" width="130" height="30">
+                        <div className="text-2xl font-medium">
+                          <MetricValue value={powerHouseDischargeValue} decimals={0} suffix=" m³/s" />
+                        </div>
+                      </foreignObject>
+                      
+                    </g>
+                  </>
+                )}
               </g>
 
               {/* Input */}
@@ -796,6 +852,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                       <MetricValue value={rainfallValue} decimals={0} suffix=" mm" />
                     </div>
                   </foreignObject>
+                  {rainfallValue === null && <SvgUnavailablePill x={0} y="-12" label="No data" />}
                 </g>
 
                 <g transform="translate(0,220)">
@@ -811,6 +868,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                       <MetricValue value={inflowValue} decimals={0} suffix=" m³/s" />
                     </div>
                   </foreignObject>
+                  {inflowValue === null && <SvgUnavailablePill x={20} y="66" label="No data" />}
                  
                 </g>
               </g>
