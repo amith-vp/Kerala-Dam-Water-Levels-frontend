@@ -5,6 +5,7 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Droplet, Gauge, CloudRain, ArrowDown, ArrowUp, Zap, Waves } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDamNumber } from "@/lib/dam-data";
+import { cardContentClass, cardHeaderClass, detailCardClass, iconChipClass, insetTileClass, metricCardClass } from "@/components/dam/cardStyles";
 
 interface DamStatusCardsProps {
   currentData: any;
@@ -65,14 +66,16 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
         hidden: { opacity: 0, y: 20 },
         show: { opacity: 1, y: 0 }
       }}>
-        <Card className="bg-white/50 dark:bg-black/40 backdrop-blur-sm border-l-4 border-l-blue-500 transition-all duration-300 hover:shadow-lg h-[160px] flex flex-col">
-          <CardHeader className="pb-2">
+        <Card className={metricCardClass}>
+          <CardHeader className={cardHeaderClass}>
             <CardTitle className="text-sm md:text-base font-medium text-muted-foreground flex items-center gap-2">
-              <Droplet className="h-4 w-4 text-blue-500" />
+              <span className={iconChipClass}>
+                <Droplet className="h-4 w-4 text-blue-500" />
+              </span>
               Water Level
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1">
+          <CardContent className={`${cardContentClass} flex-1`}>
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xl md:text-2xl font-bold tracking-tight">
@@ -94,19 +97,19 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
               </div>
               {waterLevelStats && (
                 <div className="grid grid-cols-3 gap-1 mt-auto">
-                  <div className="flex flex-col items-center p-1.5 rounded-md bg-background/50 dark:bg-black/30">
+                  <div className={`flex flex-col items-center p-1.5 ${insetTileClass}`}>
                     <span className="text-xs md:text-sm text-muted-foreground">Min</span>
                     <span className="text-xs md:text-sm font-medium">
                       <AnimatedNumber value={waterLevelStats.min} decimals={1} suffix=" m" />
                     </span>
                   </div>
-                  <div className="flex flex-col items-center p-1.5 rounded-md bg-background/50 dark:bg-black/30">
+                  <div className={`flex flex-col items-center p-1.5 ${insetTileClass}`}>
                     <span className="text-xs md:text-sm text-muted-foreground">Avg</span>
                     <span className="text-xs md:text-sm font-medium">
                       <AnimatedNumber value={waterLevelStats.avg} decimals={1} suffix=" m" />
                     </span>
                   </div>
-                  <div className="flex flex-col items-center p-1.5 rounded-md bg-background/50 dark:bg-black/30">
+                  <div className={`flex flex-col items-center p-1.5 ${insetTileClass}`}>
                     <span className="text-xs md:text-sm text-muted-foreground">Max</span>
                     <span className="text-xs md:text-sm font-medium">
                       <AnimatedNumber value={waterLevelStats.max} decimals={1} suffix=" m" />
@@ -124,14 +127,16 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
         hidden: { opacity: 0, y: 20 },
         show: { opacity: 1, y: 0 }
       }}>
-        <Card className="bg-white/50 dark:bg-black/40 backdrop-blur-sm border-l-4 border-l-emerald-500 transition-all duration-300 hover:shadow-lg h-[160px] flex flex-col">
-          <CardHeader className="pb-2">
+        <Card className={metricCardClass}>
+          <CardHeader className={cardHeaderClass}>
             <CardTitle className="text-sm md:text-base font-medium text-muted-foreground flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-emerald-500" />
+              <span className={iconChipClass}>
+                <Gauge className="h-4 w-4 text-emerald-500" />
+              </span>
               Storage
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1">
+          <CardContent className={`${cardContentClass} flex-1`}>
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xl md:text-2xl font-bold tracking-tight flex items-baseline">
@@ -162,14 +167,16 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
           hidden: { opacity: 0, y: 20 },
           show: { opacity: 1, y: 0 }
         }}>
-          <Card className="bg-white/50 dark:bg-black/40 backdrop-blur-sm border-l-4 border-l-blue-500 transition-all duration-300 hover:shadow-lg h-[160px] flex flex-col">
-            <CardHeader className="pb-2">
+          <Card className={metricCardClass}>
+            <CardHeader className={cardHeaderClass}>
               <CardTitle className="text-sm md:text-base font-medium text-muted-foreground flex items-center gap-2">
-                <ArrowDown className="h-4 w-4 text-blue-500" />
+                <span className={iconChipClass}>
+                  <ArrowDown className="h-4 w-4 text-blue-500" />
+                </span>
                 Inflow
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1">
+            <CardContent className={`${cardContentClass} flex-1`}>
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xl md:text-2xl font-bold tracking-tight">
@@ -195,14 +202,16 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
           hidden: { opacity: 0, y: 20 },
           show: { opacity: 1, y: 0 }
         }}>
-          <Card className="bg-white/50 dark:bg-black/40 backdrop-blur-sm border-l-4 border-l-purple-500 transition-all duration-300 hover:shadow-lg h-[160px] flex flex-col">
-            <CardHeader className="pb-2">
+          <Card className={metricCardClass}>
+            <CardHeader className={cardHeaderClass}>
               <CardTitle className="text-sm md:text-base font-medium text-muted-foreground flex items-center gap-2">
-                <ArrowUp className="h-4 w-4 text-purple-500" />
+                <span className={iconChipClass}>
+                  <ArrowUp className="h-4 w-4 text-purple-500" />
+                </span>
                 Outflow
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1">
+            <CardContent className={`${cardContentClass} flex-1`}>
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xl md:text-2xl font-bold tracking-tight">
@@ -242,8 +251,8 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
             show: { opacity: 1, y: 0 }
           }}
         >
-          <Card className="bg-white/50 dark:bg-black/40 backdrop-blur-sm border-l-4 border-l-slate-500">
-            <CardContent className="p-4">
+          <Card className={detailCardClass}>
+            <CardContent className="p-3">
               <div className="text-sm text-muted-foreground mb-1">Remarks</div>
               <div className="text-sm font-medium">{currentData.remarks}</div>
             </CardContent>

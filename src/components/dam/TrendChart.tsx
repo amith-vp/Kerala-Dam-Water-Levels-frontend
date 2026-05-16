@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, ComposedChart, Line, Area, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend } from "@/components/ui/chart";
 import { LucideIcon } from "lucide-react";
+import { cardContentClass, cardHeaderClass, detailCardClass, iconChipClass } from "@/components/dam/cardStyles";
 
 interface DataPoint {
   [key: string]: any;
@@ -45,17 +46,18 @@ export function TrendChart({
       return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
     })
   );
-
   return (
-    <Card className={`bg-white/50 dark:bg-black/40 backdrop-blur-sm border-l-4 transition-all duration-300 hover:shadow-lg`} style={{ borderLeftColor: iconColor }}>
-      <CardHeader>
+    <Card className={detailCardClass}>
+      <CardHeader className={cardHeaderClass}>
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <Icon className="h-4 w-4" style={{ color: iconColor }} />
+          <span className={iconChipClass}>
+            <Icon className="h-4 w-4" style={{ color: iconColor }} />
+          </span>
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="h-[250px] w-full">
+      <CardContent className={cardContentClass}>
+        <div className="h-[240px] w-full">
           {hasChartData ? (
             <ResponsiveContainer width="100%" height="100%">
               <ChartContainer 
