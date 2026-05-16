@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Droplet, Gauge, CloudRain, ArrowDown, ArrowUp, Zap, Waves } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { parseDamNumber } from "@/lib/dam-data";
 
 interface DamStatusCardsProps {
   currentData: any;
@@ -16,14 +17,32 @@ interface DamStatusCardsProps {
 }
 
 function getAlertZone(waterLevel: number, damData: any) {
-  if (waterLevel >= parseFloat(damData.redLevel)) return 'red';
-  if (waterLevel >= parseFloat(damData.orangeLevel)) return 'orange';
-  if (waterLevel >= parseFloat(damData.blueLevel)) return 'blue';
+  const redLevel = parseDamNumber(damData.redLevel);
+  const orangeLevel = parseDamNumber(damData.orangeLevel);
+  const blueLevel = parseDamNumber(damData.blueLevel);
+
+  if (redLevel !== null && waterLevel >= redLevel) return 'red';
+  if (orangeLevel !== null && waterLevel >= orangeLevel) return 'orange';
+  if (blueLevel !== null && waterLevel >= blueLevel) return 'blue';
   return 'normal';
 }
 
 export function DamStatusCards({ currentData, damData, waterLevelStats }: DamStatusCardsProps) {
-  const currentAlertZone = currentData ? getAlertZone(parseFloat(currentData.waterLevel), damData) : 'normal';
+  const waterLevel = parseDamNumber(currentData?.waterLevel);
+  const storagePercentage = parseDamNumber(currentData?.storagePercentage);
+  const liveStorage = parseDamNumber(currentData?.liveStorage);
+  const capacity = parseDamNumber(damData.liveStorageAtFRL);
+  const inflow = parseDamNumber(currentData?.inflow);
+  const rainfall = parseDamNumber(currentData?.rainfall);
+  const outflow = parseDamNumber(currentData?.totalOutflow || currentData?.outflow);
+  const powerHouseDischarge = parseDamNumber(currentData?.powerHouseDischarge);
+  const spillwayRelease = parseDamNumber(currentData?.spillwayRelease);
+  const progressValue = storagePercentage ?? (liveStorage !== null && capacity ? (liveStorage / capacity) * 100 : 0);
+  const currentAlertZone = waterLevel !== null ? getAlertZone(waterLevel, damData) : 'normal';
+
+  const MetricValue = ({ value, decimals, suffix }: { value: number | null; decimals: number; suffix: string }) => (
+    value === null ? <span>N/A</span> : <AnimatedNumber value={value} decimals={decimals} suffix={suffix} />
+  );
 
   return (
     <motion.div 
@@ -57,11 +76,7 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xl md:text-2xl font-bold tracking-tight">
-                  <AnimatedNumber 
-                    value={currentData?.waterLevel ? parseFloat(currentData.waterLevel) : 0} 
-                    decimals={2}
-                    suffix=" m"
-                  />
+                  <MetricValue value={waterLevel} decimals={2} suffix=" m" />
                 </span>
                 {currentData && (
                   <div className={cn(
@@ -120,28 +135,20 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xl md:text-2xl font-bold tracking-tight flex items-baseline">
-                  <AnimatedNumber 
-                    value={currentData?.storagePercentage ? parseFloat(currentData.storagePercentage) : 0}
-                    decimals={1}
-                    suffix="%"
-                  />
+                  <MetricValue value={storagePercentage} decimals={1} suffix="%" />
                 </span>
                 <div className="text-xs md:text-sm text-muted-foreground">
-                  <AnimatedNumber 
-                    value={parseFloat(currentData?.liveStorage || "0")}
-                    decimals={1}
-                    suffix=" MCM"
-                  />
+                  <MetricValue value={liveStorage} decimals={1} suffix=" MCM" />
                 </div>
               </div>
               <Progress 
-                value={(parseFloat(currentData?.liveStorage || "0") / parseFloat(damData.liveStorageAtFRL)) * 100} 
+                value={Math.max(0, Math.min(progressValue, 100))} 
                 className="h-2" 
               />
               <div className="flex items-center justify-between text-xs md:text-sm text-muted-foreground mt-2">
                 <span>Total Capacity</span>
                 <span className="font-medium">
-                  <AnimatedNumber value={parseFloat(damData.liveStorageAtFRL)} decimals={1} suffix=" MCM" />
+                  <MetricValue value={capacity} decimals={1} suffix=" MCM" />
                 </span>
               </div>
             </div>
@@ -166,11 +173,7 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xl md:text-2xl font-bold tracking-tight">
-                    <AnimatedNumber 
-                      value={currentData?.inflow ? parseFloat(currentData.inflow) : 0}
-                      decimals={1}
-                      suffix=" m³/s"
-                    />
+                    <MetricValue value={inflow} decimals={1} suffix=" m³/s" />
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs md:text-sm text-muted-foreground mt-auto pt-2 border-t">
@@ -179,7 +182,7 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
                     <span>Rainfall</span>
                   </div>
                   <span className="font-medium">
-                    <AnimatedNumber value={currentData?.rainfall ? parseFloat(currentData.rainfall) : 0} decimals={1} suffix=" mm" />
+                    <MetricValue value={rainfall} decimals={1} suffix=" mm" />
                   </span>
                 </div>
               </div>
@@ -203,11 +206,7 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xl md:text-2xl font-bold tracking-tight">
-                    <AnimatedNumber 
-                      value={currentData?.totalOutflow ? parseFloat(currentData.totalOutflow) : 0}
-                      decimals={1}
-                      suffix=" m³/s"
-                    />
+                    <MetricValue value={outflow} decimals={1} suffix=" m³/s" />
                   </span>
                 </div>
                 <div className="flex flex-col gap-1.5 mt-auto pt-2 border-t text-xs md:text-sm">
@@ -217,7 +216,7 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
                       <span>Power</span>
                     </div>
                     <span className="font-medium">
-                      <AnimatedNumber value={currentData?.powerHouseDischarge ? parseFloat(currentData.powerHouseDischarge) : 0} decimals={1} suffix=" m³/s" />
+                      <MetricValue value={powerHouseDischarge} decimals={1} suffix=" m³/s" />
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -226,7 +225,7 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
                       <span>Spillway</span>
                     </div>
                     <span className="font-medium">
-                      <AnimatedNumber value={currentData?.spillwayRelease ? parseFloat(currentData.spillwayRelease) : 0} decimals={1} suffix=" m³/s" />
+                      <MetricValue value={spillwayRelease} decimals={1} suffix=" m³/s" />
                     </span>
                   </div>
                 </div>
@@ -235,6 +234,22 @@ export function DamStatusCards({ currentData, damData, waterLevelStats }: DamSta
           </Card>
         </motion.div>
       </div>
+      {currentData?.remarks && (
+        <motion.div
+          className="md:col-span-4"
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            show: { opacity: 1, y: 0 }
+          }}
+        >
+          <Card className="bg-white/50 dark:bg-black/40 backdrop-blur-sm border-l-4 border-l-slate-500">
+            <CardContent className="p-4">
+              <div className="text-sm text-muted-foreground mb-1">Remarks</div>
+              <div className="text-sm font-medium">{currentData.remarks}</div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

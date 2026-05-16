@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { parseDamNumber } from "@/lib/dam-data";
 
 interface VisualizationProps {
   data: any[];
@@ -22,12 +23,20 @@ interface VisualizationProps {
 export function Visualization({ data, currentIndex, onIndexChange, damData }: VisualizationProps) {
   const { theme } = useTheme();
   const currentData = data[currentIndex] || data[data.length - 1];
-  const waterLevel = parseFloat(currentData?.storagePercentage || "0");
-  const hasRainfall = parseFloat(currentData?.rainfall || "0") > 0;
+  const waterLevel = parseDamNumber(currentData?.storagePercentage) ?? 0;
+  const actualWaterLevel = parseDamNumber(currentData?.waterLevel);
+  const rainfallValue = parseDamNumber(currentData?.rainfall);
+  const inflowValue = parseDamNumber(currentData?.inflow);
+  const spillwayReleaseValue = parseDamNumber(currentData?.spillwayRelease);
+  const powerHouseDischargeValue = parseDamNumber(currentData?.powerHouseDischarge);
+  const hasRainfall = rainfallValue !== null && rainfallValue > 0;
+  const MetricValue = ({ value, decimals, suffix }: { value: number | null; decimals: number; suffix: string }) => (
+    value === null ? <span>N/A</span> : <AnimatedNumber value={value} decimals={decimals} suffix={suffix} />
+  );
 
   const raindrops = useMemo(() => {
     if (!hasRainfall) return [];
-    const rainfall = parseFloat(currentData?.rainfall || "0");
+    const rainfall = rainfallValue || 0;
     const minDrops = 10;
     const maxDrops = 40;
     const count = Math.min(maxDrops, minDrops + Math.ceil(rainfall * 1.5));
@@ -38,7 +47,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
       height: `${3 + (rainfall / 20 * Math.random() * 2)}vh`,
       key: i
     }));
-  }, [hasRainfall, currentData?.rainfall]);
+  }, [hasRainfall, rainfallValue]);
 
   const fixedStars = useMemo(() => Array.from({ length: 85 }).map((_, i) => {
     const phi = (1 + Math.sqrt(5)) / 2;
@@ -435,12 +444,9 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                     <g transform="translate(22,-17)">
                       <foreignObject x="-30" y="-10" width="150" height="24">
                         <div className="text-center" style={{ width: '100%', height: '100%' }}>
-                          <AnimatedNumber
-                            value={parseFloat(currentData?.waterLevel || '0')}
-                            decimals={2}
-                            suffix="m"
-                            className="text-2xl font-medium"
-                          />
+                          <span className="text-2xl font-medium">
+                            <MetricValue value={actualWaterLevel} decimals={2} suffix="m" />
+                          </span>
                         </div>
                       </foreignObject>
                     </g>
@@ -747,11 +753,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                   </text>
                   <foreignObject x="5" y="35" width="130" height="30">
                     <div className="text-2xl font-medium">
-                      <AnimatedNumber
-                        value={parseFloat(currentData?.spillwayRelease || '0')}
-                        decimals={0}
-                        suffix=" m³/s"
-                      />
+                      <MetricValue value={spillwayReleaseValue} decimals={0} suffix=" m³/s" />
                     </div>
                   </foreignObject>
                 </g>
@@ -766,11 +768,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                   </text>
                   <foreignObject x="5" y="35" width="130" height="30">
                     <div className="text-2xl font-medium">
-                      <AnimatedNumber
-                        value={parseFloat(currentData?.powerHouseDischarge || '0')}
-                        decimals={0}
-                        suffix=" m³/s"
-                      />
+                      <MetricValue value={powerHouseDischargeValue} decimals={0} suffix=" m³/s" />
                     </div>
                   </foreignObject>
                   
@@ -790,11 +788,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                   </text>
                   <foreignObject x="0" y="-45" width="130" height="30">
                     <div className="text-2xl font-medium">
-                      <AnimatedNumber
-                        value={parseFloat(currentData?.rainfall || '0')}
-                        decimals={0}
-                        suffix=" mm"
-                      />
+                      <MetricValue value={rainfallValue} decimals={0} suffix=" mm" />
                     </div>
                   </foreignObject>
                 </g>
@@ -809,11 +803,7 @@ export function Visualization({ data, currentIndex, onIndexChange, damData }: Vi
                   </text>
                   <foreignObject x="20" y="35" width="130" height="30">
                     <div className="text-2xl font-medium">
-                      <AnimatedNumber
-                        value={parseFloat(currentData?.inflow || '0')}
-                        decimals={0}
-                        suffix=" m³/s"
-                      />
+                      <MetricValue value={inflowValue} decimals={0} suffix=" m³/s" />
                     </div>
                   </foreignObject>
                  

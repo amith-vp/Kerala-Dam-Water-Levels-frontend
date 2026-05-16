@@ -6,15 +6,18 @@ import type { Dam } from '@/types/dam';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import DamMarker from './DamMarker';
+import { getDamSource, parseDamNumber } from '@/lib/dam-data';
+import type { DamSource } from '@/types/dam';
 
 interface MapProps {
   dams: Dam[];
   lastUpdate?: string;
+  lastUpdates?: Partial<Record<DamSource, string>>;
 }
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
-const Map = ({ dams, lastUpdate }: MapProps) => {
+const Map = ({ dams, lastUpdate, lastUpdates }: MapProps) => {
   const navigate = useNavigate();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapboxMap = useRef<mapboxgl.Map | null>(null);
@@ -60,6 +63,7 @@ const Map = ({ dams, lastUpdate }: MapProps) => {
               <DamMarker 
                 damName={(markerDiv as any).damName || ''}
                 waterLevel={(markerDiv as any).waterLevel || 0}
+                source={(markerDiv as any).source || 'KSEB'}
                 isCollapsed={zoom < (viewportWidth < 768 ? 10 : 9)}
               />
             );
@@ -106,11 +110,12 @@ const Map = ({ dams, lastUpdate }: MapProps) => {
     dams.forEach(dam => {
       const markerDiv = document.createElement('div');
       markerDiv.style.transform = `scale(${markerScale})`; 
-      const waterLevelPercentage = parseFloat(dam.data[0]?.storagePercentage || "0");
+      const waterLevelPercentage = parseDamNumber(dam.data[0]?.storagePercentage) ?? 0;
       
       // Store data on the div for updates
       (markerDiv as any).damName = dam.name;
       (markerDiv as any).waterLevel = waterLevelPercentage;
+      (markerDiv as any).source = getDamSource(dam);
       
       const marker = new mapboxgl.Marker({
         element: markerDiv
@@ -124,13 +129,14 @@ const Map = ({ dams, lastUpdate }: MapProps) => {
         <DamMarker 
           damName={dam.name} 
           waterLevel={waterLevelPercentage}
+          source={getDamSource(dam)}
           isCollapsed={mapboxMap.current.getZoom() < (viewportWidth < 768 ? 10 : 9)}
         />
       );
 
       // click handler
       markerDiv.addEventListener('click', () => {
-        navigate(`/${dam.name}`);
+        navigate(`/${encodeURIComponent(dam.name)}?source=${getDamSource(dam)}`);
       });
     });
 
@@ -162,7 +168,7 @@ const Map = ({ dams, lastUpdate }: MapProps) => {
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }} className="touch-none">
       <div ref={mapRef} style={{ position: 'absolute', width: '100%', height: '100%' }} />
-      {lastUpdate && (
+      {(lastUpdate || lastUpdates) && (
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -171,7 +177,11 @@ const Map = ({ dams, lastUpdate }: MapProps) => {
         >
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-border/50 shadow-lg">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500/90 animate-pulse" />
-            <span className="text-[11px] sm:text-xs text-zinc-800 dark:text-zinc-200 whitespace-nowrap font-medium">Updated {lastUpdate}</span>
+            <span className="text-[11px] sm:text-xs text-zinc-800 dark:text-zinc-200 whitespace-nowrap font-medium">
+              {lastUpdates?.KSEB && lastUpdates?.Irrigation
+                ? `KSEB ${lastUpdates.KSEB} · Irrigation ${lastUpdates.Irrigation}`
+                : `Updated ${lastUpdate || lastUpdates?.KSEB || lastUpdates?.Irrigation}`}
+            </span>
           </div>
         </motion.div>
       )}

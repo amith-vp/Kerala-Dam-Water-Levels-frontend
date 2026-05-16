@@ -1,13 +1,15 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { DamSource } from '@/types/dam';
 
 interface DamMarkerProps {
   damName: string;
   waterLevel: number;
+  source?: DamSource;
   isCollapsed?: boolean;
 }
 
-const DamMarker = ({ damName = "test", waterLevel = 75, isCollapsed = false }: DamMarkerProps) => {
+const DamMarker = ({ damName = "test", waterLevel = 75, source = "KSEB", isCollapsed = false }: DamMarkerProps) => {
   const getWaterColor = (level: number) => {
     if (level < 20) return "#90EE9080";
     if (level < 40) return "#ADFF2F80";
@@ -15,6 +17,10 @@ const DamMarker = ({ damName = "test", waterLevel = 75, isCollapsed = false }: D
     if (level < 80) return "#FFA50080";
     return "#FF000080";
   };
+
+  const sourceAccent = source === "Irrigation"
+    ? { color: "#0f766e", shortLabel: "I", label: "Irrigation" }
+    : { color: "#2563eb", shortLabel: "K", label: "KSEB" };
 
   return (
     <motion.div 
@@ -57,7 +63,7 @@ const DamMarker = ({ damName = "test", waterLevel = 75, isCollapsed = false }: D
               animate={{ strokeDasharray: `${waterLevel}, 100` }}
               transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
             />
-            
+
             <motion.text
               x="20"
               y="24"
@@ -71,6 +77,28 @@ const DamMarker = ({ damName = "test", waterLevel = 75, isCollapsed = false }: D
               {`${waterLevel.toFixed(0)}%`}
             </motion.text>
           </svg>
+          <motion.div
+            layout
+            className="absolute -top-0.5 left-5 flex h-3.5 origin-left items-center justify-start overflow-hidden rounded-full bg-white/65 px-0.5 text-[7px] font-black leading-none shadow-sm backdrop-blur-[1px]"
+            style={{ color: sourceAccent.color }}
+            animate={{ minWidth: isCollapsed ? 12 : source === "Irrigation" ? 40 : 23 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            title={source}
+            aria-label={`${source} dam`}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={isCollapsed ? sourceAccent.shortLabel : sourceAccent.label}
+                initial={{ opacity: 0, y: -3 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 3 }}
+                transition={{ duration: 0.15 }}
+                className="whitespace-nowrap"
+              >
+                {isCollapsed ? sourceAccent.shortLabel : sourceAccent.label}
+              </motion.span>
+            </AnimatePresence>
+          </motion.div>
         </motion.div>
         
         {/* Dam Name */}
@@ -83,7 +111,7 @@ const DamMarker = ({ damName = "test", waterLevel = 75, isCollapsed = false }: D
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
             >
-              <div className="px-2 py-0.5 whitespace-nowrap">
+              <div className="px-2 pb-0.5 pt-3 whitespace-nowrap">
                 <p className="text-base font-jetbrains font-extrabold text-black tracking-tight">
                   {damName}
                 </p>

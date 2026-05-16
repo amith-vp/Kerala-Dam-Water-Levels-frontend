@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchHistoricalDamData } from "@/lib/api";
@@ -13,17 +13,15 @@ import { DamSpecifications } from "@/components/dam/DamSpecifications";
 import { TrendChart } from "@/components/dam/TrendChart";
 import { Visualization } from "@/components/dam/Visualization";
 import { Helmet } from 'react-helmet';
+import { isDamSource, parseDamNumber } from "@/lib/dam-data";
+import type { DamSource } from "@/types/dam";
 
 const TIME_RANGE_STORAGE_KEY = 'dam-time-range';
 
-const parseNumber = (value: string | undefined): number => {
-  if (!value || value.trim() === '') return 0;
-  const parsed = parseFloat(value);
-  return isNaN(parsed) ? 0 : parsed;
-};
+const parseNumber = (value: string | undefined): number | null => parseDamNumber(value);
 
-const calculateAxisDomain = (data: number[]): [number, number] => {
-  const validData = data.filter(val => typeof val === 'number' && !isNaN(val) && val !== undefined);
+const calculateAxisDomain = (data: Array<number | null | undefined>): [number, number] => {
+  const validData = data.filter((val): val is number => typeof val === 'number' && !isNaN(val));
   if (validData.length === 0) return [0, 100];
   const min = Math.min(...validData);
   const max = Math.max(...validData);
@@ -37,6 +35,8 @@ const calculateAxisDomain = (data: number[]): [number, number] => {
 
 const DamDetail = () => {
   const { name } = useParams();
+  const [searchParams] = useSearchParams();
+  const source: DamSource = isDamSource(searchParams.get("source")) ? searchParams.get("source") as DamSource : "KSEB";
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     try {
       const savedRange = localStorage.getItem(TIME_RANGE_STORAGE_KEY);
@@ -58,8 +58,8 @@ const DamDetail = () => {
   const [visualizationIndex, setVisualizationIndex] = useState(0);
 
   const { data: damData, isLoading, error } = useQuery({
-    queryKey: ["dam-history", name],
-    queryFn: () => fetchHistoricalDamData(name || ""),
+    queryKey: ["dam-history", source, name],
+    queryFn: () => fetchHistoricalDamData(name || "", source),
     enabled: !!name,
   });
 
@@ -120,7 +120,9 @@ const DamDetail = () => {
 
   const waterLevelStats = useMemo(() => {
     if (!filteredData?.length) return null;
-    const levels = filteredData.map(d => parseFloat(d.waterLevel)).filter(level => !isNaN(level));
+    const levels = filteredData
+      .map(d => parseNumber(d.waterLevel))
+      .filter((level): level is number => level !== null);
     if (levels.length === 0) return null;
     return {
       min: Math.min(...levels),
@@ -188,30 +190,33 @@ const DamDetail = () => {
   }
 
   const currentData = filteredData?.[filteredData.length - 1] || damData?.data[damData.data.length - 1];
+  const isIrrigation = damData.source === "Irrigation";
 
   // domains for charts
   const inflowDomain = calculateAxisDomain(filteredData?.map(d => parseNumber(d.inflow)) || []);
   const rainfallDomain = calculateAxisDomain(filteredData?.map(d => parseNumber(d.rainfall)) || []);
   const storageDomain = calculateAxisDomain(filteredData?.map(d => parseNumber(d.liveStorage)) || []);
-  const outflowDomain = calculateAxisDomain([
-    ...(filteredData?.map(d => parseNumber(d.powerHouseDischarge)) || []),
-    ...(filteredData?.map(d => parseNumber(d.spillwayRelease)) || [])
-  ]);
+  const outflowDomain = calculateAxisDomain(isIrrigation
+    ? (filteredData?.map(d => parseNumber(d.totalOutflow)) || [])
+    : [
+        ...(filteredData?.map(d => parseNumber(d.powerHouseDischarge)) || []),
+        ...(filteredData?.map(d => parseNumber(d.spillwayRelease)) || [])
+      ]);
 
   // Calculate water level ,alerts
-  const waterLevels = filteredData?.map(d => parseFloat(d.waterLevel)) || [];
+  const waterLevels = filteredData?.map(d => parseNumber(d.waterLevel)) || [];
   const referenceLines = [
-    parseFloat(damData.FRL),
-    parseFloat(damData.redLevel),
-    parseFloat(damData.orangeLevel),
-    parseFloat(damData.blueLevel)
-  ].filter(val => !isNaN(val) && val > 0);
+    parseNumber(damData.FRL),
+    parseNumber(damData.redLevel),
+    parseNumber(damData.orangeLevel),
+    parseNumber(damData.blueLevel)
+  ].filter((val): val is number => val !== null && val > 0);
   const waterLevelDomain = calculateAxisDomain([...waterLevels, ...referenceLines]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-blue-50 to-teal-50 dark:from-black dark:to-slate-950">
       <Helmet>
-        <title>{damData.name} Dam Water Levels</title>
+        <title>{damData.name} {damData.source} Dam Water Levels</title>
         <meta name="description" content={`Current water level of ${damData.name} dam is ${currentData?.waterLevel} meters.`} />
         <meta name="keywords" content={`${damData.name} dam, water levels, dam storage, inflow, outflow, rainfall`} />
         <meta property="og:title" content={`${damData.name} Dam Water Levels | Real-time Monitoring`} />
@@ -290,9 +295,10 @@ const DamDetail = () => {
                 iconColor="rgb(56, 189, 248)"
                 data={filteredData?.map(item => ({
                   ...item,
-                  fullReservoirLevel: parseFloat(damData.FRL),
-                  redAlertLevel: parseFloat(damData.redLevel),
-                  orangeAlertLevel: parseFloat(damData.orangeLevel)
+                  waterLevel: parseNumber(item.waterLevel),
+                  fullReservoirLevel: parseNumber(damData.FRL),
+                  redAlertLevel: parseNumber(damData.redLevel),
+                  orangeAlertLevel: parseNumber(damData.orangeLevel)
                 }))}
                 charts={[
                   { type: 'area', dataKey: 'waterLevel', color: 'rgb(56, 189, 248)', label: 'Water Level' },
@@ -356,12 +362,17 @@ const DamDetail = () => {
                   title="Outflow Trend"
                   icon={ArrowUp}
                   iconColor="rgb(168, 85, 247)"
-                  data={filteredData?.map(item => ({
+                  data={filteredData?.map(item => isIrrigation ? ({
+                    ...item,
+                    totalOutflow: parseNumber(item.totalOutflow)
+                  }) : ({
                     ...item,
                     powerHouseDischarge: parseNumber(item.powerHouseDischarge),
                     spillwayRelease: parseNumber(item.spillwayRelease)
                   }))}
-                  charts={[
+                  charts={isIrrigation ? [
+                    { type: 'area', dataKey: 'totalOutflow', color: 'rgb(168, 85, 247)', label: 'Outflow' }
+                  ] : [
                     { type: 'line', dataKey: 'powerHouseDischarge', color: 'rgb(234, 179, 8)', label: 'Power House' },
                     { type: 'line', dataKey: 'spillwayRelease', color: 'rgb(239, 68, 68)', label: 'Spillway' }
                   ]}

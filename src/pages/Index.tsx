@@ -6,6 +6,7 @@ import Map from "@/components/Map";
 import DamList from "@/components/DamList";
 import { useToast } from "@/hooks/use-toast";
 import { Helmet } from 'react-helmet';
+import type { DamSourceFilter } from "@/types/dam";
 
 const Index = () => {
   const { toast } = useToast();
@@ -13,6 +14,7 @@ const Index = () => {
   const [verticalSizes, setVerticalSizes] = useState([45, 55]);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [isClient, setIsClient] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<DamSourceFilter>("all");
 
   useEffect(() => {
     setIsClient(true);
@@ -25,8 +27,8 @@ const Index = () => {
   }, []);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["dams"],
-    queryFn: fetchLiveDamData,
+    queryKey: ["dams", sourceFilter],
+    queryFn: () => fetchLiveDamData(sourceFilter),
     meta: {
       onError: () => {
         toast({
@@ -54,13 +56,19 @@ const Index = () => {
           >
             <div className="relative h-full w-full overflow-hidden rounded-lg shadow-lg">
               <div className="absolute inset-0 bg-background/80 backdrop-blur-sm -z-10" />
-              <Map dams={data?.dams || []} lastUpdate={data?.lastUpdate} />
+              <Map
+                dams={data?.dams || []}
+                lastUpdate={data?.lastUpdate}
+                lastUpdates={data?.lastUpdates}
+              />
             </div>
             <div className="h-full w-full overflow-hidden">
               <DamList
                 dams={data?.dams || []}
                 isLoading={isLoading}
                 error={error as Error}
+                sourceFilter={sourceFilter}
+                onSourceFilterChange={setSourceFilter}
               />
             </div>
           </SplitPane>

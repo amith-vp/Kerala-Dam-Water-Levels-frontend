@@ -39,6 +39,12 @@ export function TrendChart({
   secondaryUnit
 }: TrendChartProps) {
   const hasSecondaryAxis = charts.some(chart => chart.yAxisId === 'right');
+  const hasChartData = data?.some(point =>
+    charts.some(chart => {
+      const value = point?.[chart.dataKey];
+      return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+    })
+  );
 
   return (
     <Card className={`bg-white/50 dark:bg-black/40 backdrop-blur-sm border-l-4 transition-all duration-300 hover:shadow-lg`} style={{ borderLeftColor: iconColor }}>
@@ -50,7 +56,7 @@ export function TrendChart({
       </CardHeader>
       <CardContent>
         <div className="h-[250px] w-full">
-          {data && data.length > 0 ? (
+          {hasChartData ? (
             <ResponsiveContainer width="100%" height="100%">
               <ChartContainer 
                 config={Object.fromEntries(

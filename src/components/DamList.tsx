@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, ArrowUpDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select,
   SelectContent,
@@ -25,8 +27,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import type { Dam } from "@/types/dam";
+import type { Dam, DamSource, DamSourceFilter } from "@/types/dam";
 import { AnimatedNumber } from '@/components/ui/animated-number';
+import { formatDamValue, getDamSource, parseDamNumber } from "@/lib/dam-data";
 
 type SortField = "storagePercentage" | "liveStorage" | "totalCapacity" | "inflow" | 
                  "powerhouseDischarge" | "spillwayRelease" | "totalOutflow" | 
@@ -37,11 +40,13 @@ interface DamListProps {
   dams: Dam[];
   isLoading: boolean;
   error: Error | null;
+  sourceFilter: DamSourceFilter;
+  onSourceFilterChange: (source: DamSourceFilter) => void;
 }
 
 const getSortLabel = (field: SortField): string => {
   const labels: Record<SortField, string> = {
-    storagePercentage: "Storage Percnt.",
+    storagePercentage: "Storage Percent",
     liveStorage: "Current Storage",
     totalCapacity: "Total Capacity",
     inflow: "Inflow",
@@ -66,26 +71,49 @@ const formatUnits: Record<string, string> = {
   storagePercentage: "%",
 };
 
-const formatValue = (value: string | undefined, property: string) => {
-  const numValue = parseFloat(value || "");
-  return typeof numValue === "number" && !isNaN(numValue)
-    ? `${numValue.toFixed(2)}${formatUnits[property] || ""}`
-    : property === "name"
-    ? value
-    : "N/A";
+const formatValue = (value: string | undefined, property: string) =>
+  property === "name" ? value : formatDamValue(value, formatUnits[property] || "");
+
+const sourceLabels: Record<DamSourceFilter, string> = {
+  all: "All",
+  KSEB: "KSEB",
+  Irrigation: "Irrigation",
 };
 
-const formatLastUpdate = (lastUpdate: string | undefined) => {
-  if (!lastUpdate) return null;
-  
-  const parts = lastUpdate.split('.');
-  if (parts.length === 3) {
-    return lastUpdate;
+const getSourceAccentClasses = (source: DamSourceFilter) => {
+  switch (source) {
+    case "KSEB":
+      return "border-blue-500/40 text-blue-700 dark:text-blue-300 data-[state=on]:bg-blue-600 data-[state=on]:text-white data-[state=on]:border-blue-600";
+    case "Irrigation":
+      return "border-teal-600/40 text-teal-700 dark:text-teal-300 data-[state=on]:bg-teal-600 data-[state=on]:text-white data-[state=on]:border-teal-600";
+    default:
+      return "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground";
   }
-  return lastUpdate;
 };
 
-const DamList = ({ dams, isLoading, error }: DamListProps) => {
+const getDamSourceBadgeClasses = (source: DamSource) =>
+  source === "Irrigation"
+    ? "border-teal-600/30 bg-teal-50/95 text-teal-700 dark:bg-teal-950/80 dark:text-teal-300"
+    : "border-blue-500/30 bg-blue-50/95 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300";
+
+const compareNullableNumbers = (
+  a: number | null,
+  b: number | null,
+  direction: SortDirection
+) => {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return direction === "asc" ? a - b : b - a;
+};
+
+const DamList = ({
+  dams,
+  isLoading,
+  error,
+  sourceFilter,
+  onSourceFilterChange,
+}: DamListProps) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("storagePercentage");
@@ -97,20 +125,22 @@ const DamList = ({ dams, isLoading, error }: DamListProps) => {
 
   const handleDamClick = useCallback(
     (dam: Dam) => {
-      navigate(`/${dam.name}`);
+      navigate(`/${encodeURIComponent(dam.name)}?source=${getDamSource(dam)}`);
     },
     [navigate]
   );
 
   const getDamAlertStatus = (dam: Dam) => {
-    const redLevel = parseFloat(dam.redLevel);
-    const orangeLevel = parseFloat(dam.orangeLevel);
-    const blueLevel = parseFloat(dam.blueLevel);
-    const waterLevel = parseFloat(dam.data[0]?.waterLevel || "0");
+    const redLevel = parseDamNumber(dam.redLevel);
+    const orangeLevel = parseDamNumber(dam.orangeLevel);
+    const blueLevel = parseDamNumber(dam.blueLevel);
+    const waterLevel = parseDamNumber(dam.data[0]?.waterLevel);
 
-    if (waterLevel >= redLevel) return "red";
-    if (waterLevel >= orangeLevel) return "orange";
-    if (waterLevel >= blueLevel) return "blue";
+    if (waterLevel === null) return "normal";
+
+    if (redLevel !== null && waterLevel >= redLevel) return "red";
+    if (orangeLevel !== null && waterLevel >= orangeLevel) return "orange";
+    if (blueLevel !== null && waterLevel >= blueLevel) return "blue";
     return "normal";
   };
 
@@ -145,41 +175,35 @@ const DamList = ({ dams, isLoading, error }: DamListProps) => {
       dam.name.toLowerCase().includes(search.toLowerCase())
     );
 
-    result = result.sort((a, b) => {
-      let comparison = 0;
+    const compareBySortField = (a: Dam, b: Dam) => {
       switch (sortField) {
         case "storagePercentage":
-          comparison = (parseFloat(a.data[0]?.storagePercentage || "0") - parseFloat(b.data[0]?.storagePercentage || "0"));
-          break;
+          return compareNullableNumbers(parseDamNumber(a.data[0]?.storagePercentage), parseDamNumber(b.data[0]?.storagePercentage), sortDirection);
         case "liveStorage":
-          comparison = (parseFloat(a.data[0]?.liveStorage || "0") - parseFloat(b.data[0]?.liveStorage || "0"));
-          break;
+          return compareNullableNumbers(parseDamNumber(a.data[0]?.liveStorage), parseDamNumber(b.data[0]?.liveStorage), sortDirection);
         case "totalCapacity":
-          comparison = (parseFloat(a.liveStorageAtFRL || "0") - parseFloat(b.liveStorageAtFRL || "0"));
-          break;
+          return compareNullableNumbers(parseDamNumber(a.liveStorageAtFRL), parseDamNumber(b.liveStorageAtFRL), sortDirection);
         case "inflow":
-          comparison = (parseFloat(a.data[0]?.inflow || "0") - parseFloat(b.data[0]?.inflow || "0"));
-          break;
+          return compareNullableNumbers(parseDamNumber(a.data[0]?.inflow), parseDamNumber(b.data[0]?.inflow), sortDirection);
         case "powerhouseDischarge":
-          comparison = (parseFloat(a.data[0]?.powerHouseDischarge || "0") - parseFloat(b.data[0]?.powerHouseDischarge || "0"));
-          break;
+          return compareNullableNumbers(parseDamNumber(a.data[0]?.powerHouseDischarge), parseDamNumber(b.data[0]?.powerHouseDischarge), sortDirection);
         case "spillwayRelease":
-          comparison = (parseFloat(a.data[0]?.spillwayRelease || "0") - parseFloat(b.data[0]?.spillwayRelease || "0"));
-          break;
+          return compareNullableNumbers(parseDamNumber(a.data[0]?.spillwayRelease), parseDamNumber(b.data[0]?.spillwayRelease), sortDirection);
         case "totalOutflow":
-          comparison = (parseFloat(a.data[0]?.totalOutflow || "0") - parseFloat(b.data[0]?.totalOutflow || "0"));
-          break;
+          return compareNullableNumbers(parseDamNumber(a.data[0]?.totalOutflow), parseDamNumber(b.data[0]?.totalOutflow), sortDirection);
         case "rainfall":
-          comparison = (parseFloat(a.data[0]?.rainfall || "0") - parseFloat(b.data[0]?.rainfall || "0"));
-          break;
+          return compareNullableNumbers(parseDamNumber(a.data[0]?.rainfall), parseDamNumber(b.data[0]?.rainfall), sortDirection);
         default:
-          comparison = a.name.localeCompare(b.name);
+          return sortDirection === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
       }
-      return sortDirection === "asc" ? comparison : -comparison;
+    };
+
+    result = result.sort((a, b) => {
+      return compareBySortField(a, b);
     });
 
     return result;
-  }, [dams, search, sortField, sortDirection]);
+  }, [dams, search, sortField, sortDirection, sourceFilter]);
 
   const getSortedValue = (dam: Dam) => {
     switch (sortField) {
@@ -229,7 +253,7 @@ const DamList = ({ dams, isLoading, error }: DamListProps) => {
     >
       <Card className="mx-2 sm:mx-4 h-full flex flex-col overflow-hidden bg-background border-none shadow-xl">
         <CardHeader className="p-2 sm:p-4 border-b bg-muted">
-          <div className="flex items-center w-full">
+          <div className="flex items-center w-full gap-2">
             <CardTitle className="text-md sm:text-sm lg:text-lg font-bold flex-1 min-w-0 truncate pr-3">
               Kerala Dam Water Level
             </CardTitle>
@@ -239,6 +263,23 @@ const DamList = ({ dams, isLoading, error }: DamListProps) => {
               </div>
             </div>
           </div>
+
+          <ToggleGroup
+            type="single"
+            value={sourceFilter}
+            onValueChange={(value) => value && onSourceFilterChange(value as DamSourceFilter)}
+            className="mt-3 grid grid-cols-3 rounded-lg border border-border/60 bg-background/70 p-1"
+          >
+            {(["all", "KSEB", "Irrigation"] as DamSourceFilter[]).map((source) => (
+              <ToggleGroupItem
+                key={source}
+                value={source}
+                className={`h-9 rounded-md border border-transparent text-xs sm:text-sm ${getSourceAccentClasses(source)}`}
+              >
+                {sourceLabels[source]}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
           
           <div className="flex flex-col sm:flex-row gap-2 min-w-0 max-w-full mt-3">
             <div className="relative flex-1 min-w-0">
@@ -321,69 +362,93 @@ const DamList = ({ dams, isLoading, error }: DamListProps) => {
               ) : (
                 filteredAndSortedDams.map((dam, index) => {
                   const alertStatus = getDamAlertStatus(dam);
+                  const sortedValue = getSortedValue(dam);
+                  const sortedNumericValue = parseDamNumber(sortedValue);
+                  const waterLevelValue = parseDamNumber(dam.data[0]?.waterLevel);
+                  const damSource = getDamSource(dam);
                   return (
-                    <motion.div
-                      key={dam.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ 
-                        opacity: 1, 
-                        y: 0,
-                        transition: { delay: index * 0.05 }
-                      }}
-                      exit={{ opacity: 0, y: -20 }}
-                      whileHover={{ y: -2 }}
-                      whileTap={{ y: 0 }}
-                      className="min-w-0"
-                    >
-                      <Card
-                        className={`cursor-pointer ${getAlertStyles(alertStatus)} overflow-hidden hover:shadow-lg bg-card group transition-all duration-300 ease-in-out`}
-                        onClick={() => handleDamClick(dam)}
+                    <div key={`${damSource}-${dam.id}`}>
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ 
+                          opacity: 1, 
+                          y: 0,
+                          transition: { delay: index * 0.05 }
+                        }}
+                        exit={{ opacity: 0, y: -20 }}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ y: 0 }}
+                        className="min-w-0"
                       >
-                        <div className="absolute left-0 top-0 flex items-center">
-                          <div className={`${getAlertLabel(alertStatus).bgClass} text-white h-7 flex items-center justify-center text-xs font-medium text-center tracking-wide rounded-br-lg shadow-sm group-hover:shadow-md transition-all duration-300`}>
-                            {getAlertLabel(alertStatus).text}
-                          </div>
-                        </div>
-                        <CardContent className="p-4 sm:p-5">
-                          <div className="flex justify-between items-start gap-4 min-w-0 mt-4">
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-semibold text-sm sm:text-base truncate pr-2  transition-colors duration-300">{dam.name}</h3>
-                              <p className="text-xs sm:text-sm text-muted-foreground/80 truncate mt-0.5">
-                                {formatValue(dam.data[0]?.waterLevel, "waterLevel")}
-                              </p>
+                        <Card
+                          className={`cursor-pointer ${getAlertStyles(alertStatus)} overflow-hidden hover:shadow-lg bg-card group transition-all duration-300 ease-in-out`}
+                          onClick={() => handleDamClick(dam)}
+                        >
+                          <div className="absolute left-0 top-0 flex items-center">
+                            <div className={`${getAlertLabel(alertStatus).bgClass} text-white h-7 flex items-center justify-center text-xs font-medium text-center tracking-wide rounded-br-lg shadow-sm group-hover:shadow-md transition-all duration-300`}>
+                              {getAlertLabel(alertStatus).text}
                             </div>
-                            <div className="text-right shrink-0">
-                              <p className="font-semibold text-sm sm:text-base whitespace-nowrap">
-                                {sortField === "name" ? (
-                                  <AnimatedNumber 
-                                    value={dam.data[0]?.waterLevel ? parseFloat(dam.data[0].waterLevel) : 0}
-                                    decimals={2}
-                                    suffix="m"
-                                  />
-                                ) : (
-                                  <AnimatedNumber 
-                                    value={parseFloat(getSortedValue(dam) || '0')}
-                                    decimals={
-                                      ["waterLevel", "storagePercentage"].includes(sortField) ? 2 : 1
-                                    }
-                                    suffix={
-                                      sortField === "storagePercentage" ? "%" :
-                                      (sortField === "liveStorage" || sortField === "totalCapacity") ? " MCM" :
-                                      ["totalOutflow", "inflow", "powerhouseDischarge", "spillwayRelease"].includes(sortField) ? " cumecs" :
-                                      sortField === "rainfall" ? " mm" :
-                                      " m"
-                                    }
-                                  />
+                          </div>
+                          <div className="absolute right-3 top-2">
+                            <Badge
+                              variant="outline"
+                              className={`h-6 px-2 text-[10px] shadow-sm backdrop-blur sm:text-xs ${getDamSourceBadgeClasses(damSource)}`}
+                            >
+                              {damSource}
+                            </Badge>
+                          </div>
+                          <CardContent className="p-4 sm:p-5">
+                            <div className="flex justify-between items-start gap-4 min-w-0 mt-4">
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-semibold text-sm sm:text-base truncate pr-2 transition-colors duration-300">{dam.name}</h3>
+                                {dam.district && (
+                                  <p className="text-[11px] sm:text-xs text-muted-foreground/70 truncate mt-0.5">
+                                    {dam.district}
+                                  </p>
                                 )}
-                              </p>
-                              <p className="text-xs sm:text-sm text-muted-foreground/80 whitespace-nowrap mt-0.5">
-                                {getSortLabel(sortField)}
-                              </p>
+                                <p className="text-xs sm:text-sm text-muted-foreground/80 truncate mt-0.5">
+                                  {formatValue(dam.data[0]?.waterLevel, "waterLevel")}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="font-semibold text-sm sm:text-base whitespace-nowrap">
+                                  {sortField === "name" ? (
+                                    waterLevelValue === null ? (
+                                      "N/A"
+                                    ) : (
+                                      <AnimatedNumber 
+                                        value={waterLevelValue}
+                                        decimals={2}
+                                        suffix="m"
+                                      />
+                                    )
+                                  ) : sortedNumericValue === null ? (
+                                    "N/A"
+                                  ) : (
+                                    <AnimatedNumber 
+                                      value={sortedNumericValue}
+                                      decimals={
+                                        ["waterLevel", "storagePercentage"].includes(sortField) ? 2 : 1
+                                      }
+                                      suffix={
+                                        sortField === "storagePercentage" ? "%" :
+                                        (sortField === "liveStorage" || sortField === "totalCapacity") ? " MCM" :
+                                        ["totalOutflow", "inflow", "powerhouseDischarge", "spillwayRelease"].includes(sortField) ? " cumecs" :
+                                        sortField === "rainfall" ? " mm" :
+                                        " m"
+                                      }
+                                    />
+                                  )}
+                                </p>
+                                <p className="text-xs sm:text-sm text-muted-foreground/80 whitespace-nowrap mt-0.5">
+                                  {getSortLabel(sortField)}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    </div>
                   );
                 })
               )}
